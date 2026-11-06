@@ -165,7 +165,7 @@
   .inside video { opacity: 0; transition: opacity .5s ease; }
   .card.playing .inside video { opacity: 1; }
   .card.done .inside .signed { opacity: 1; }
-  .card.done .inside video { opacity: 0; }
+  /* Video bleibt sichtbar, das scharfe Standbild blendet darüber ein – kein Flackern */
   .inside::after {
     content: ""; position: absolute; top: 0; right: 0; bottom: 0; left: 0;
     background: linear-gradient(90deg, rgba(0,0,0,.45), rgba(0,0,0,.08) 40%, rgba(0,0,0,0));
@@ -314,10 +314,18 @@
       if (p && p.catch) p.catch(() => {});
     } catch (e) {}
   }
+  // Karte offen: öffnen.mp3 in Dauerschleife
   function switchToLoop() {
     safePause(auAuto);
     rewind(auOeffnen);
     safePlay(auOeffnen);
+  }
+  // Karte wieder geschlossen: ursprünglicher Sound (autoplay.mp3) in Dauerschleife
+  function switchToClosedLoop() {
+    safePause(auOeffnen);
+    auAuto.loop = true;
+    rewind(auAuto);
+    safePlay(auAuto);
   }
   // Öffnet sich die Karte automatisch, läuft autoplay weiter; danach die Dauerschleife
   auAuto.addEventListener('ended', () => {
@@ -393,7 +401,8 @@
     btnCard.textContent = 'Karte öffnen';
     setMsg('<span class="dot">●</span>&nbsp; Karte antippen oder Button nutzen');
     sigTimer = setTimeout(resetInside, OPEN_MS);
-    // Nach dem ersten Öffnen kein Auto-Öffnen mehr; Ton läuft unverändert weiter
+    switchToClosedLoop();
+    // Nach dem ersten Öffnen kein Auto-Öffnen mehr
   }
 
   function toggleCard() { phase === 'card-open' ? closeCard() : openCard(true); }
