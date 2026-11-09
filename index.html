@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Weihnachtskarte</title>
-<meta name="description" content="Animierte Klappkarte im Umschlag: Frohe Weihnachten und viel Solidarität aus dem Bundestag">
+<meta name="description" content="Animierte Klappkarte im Umschlag: Frohe Weihnachten und viel Solidarität aus dem Bundestag / Merry Christmas from the German Bundestag">
 <style>
   :root {
     --bg: #1d1a18;
@@ -214,10 +214,13 @@
   }
   .msg {
     font-size: 13px; letter-spacing: .14em; text-transform: uppercase;
-    opacity: .8; max-width: 70ch; line-height: 1.6;
+    opacity: .8; max-width: 92ch; line-height: 1.6;
     margin-bottom: 14px;
   }
   .msg .dot { color: var(--red); }
+  .msg .en-line { opacity: .75; }
+  .btnrow { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; }
+  .btnrow[hidden] { display: none; }
   .btn {
     -webkit-appearance: none; appearance: none; border: 0; cursor: pointer;
     font: inherit; font-size: 14px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase;
@@ -247,9 +250,9 @@
     <div class="card-wrap" id="wrap">
       <div class="card" id="card" role="button" tabindex="-1" aria-label="Weihnachtskarte">
         <div class="inside">
-          <img class="plain" src="inside.jpg" alt="Innenseite der Karte">
+          <img class="plain" id="imgPlain" src="inside.jpg" alt="Innenseite der Karte">
           <video id="sig" src="signature.mp4" muted playsinline preload="auto" aria-hidden="true"></video>
-          <img class="signed" src="inside-signed.jpg" alt="Innenseite mit Unterschrift Ulrich Thoden">
+          <img class="signed" id="imgSigned" src="inside-signed.jpg" alt="Innenseite mit Unterschrift Ulrich Thoden">
         </div>
         <div class="cover">
           <div class="face front"><img src="cover.jpg" alt="Vorderseite der Weihnachtskarte"></div>
@@ -273,9 +276,13 @@
   <div class="controls">
     <div class="msg" id="msg">
       <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3A4.5 4.5 0 0 0 14 8v8a4.5 4.5 0 0 0 2.5-4zM14 3.2v2.1a7 7 0 0 1 0 13.4v2.1a9 9 0 0 0 0-17.6z"/></svg>
-      Bitte erst den Ton einschalten, dann den Umschlag öffnen.
+      <span lang="de">Bitte erst den Ton einschalten, dann den Umschlag öffnen.</span><br>
+      <span lang="en" class="en-line">Please turn on your sound first, then open the envelope.</span>
     </div>
-    <button class="btn" id="btnEnvelope" type="button">Umschlag öffnen</button>
+    <div class="btnrow" id="btnRow">
+      <button class="btn" id="btnEnvelope" type="button" lang="de">Umschlag öffnen</button>
+      <button class="btn" id="btnEnvelopeEn" type="button" lang="en">Open envelope</button>
+    </div>
     <button class="btn" id="btnCard" type="button" hidden>Karte öffnen</button>
   </div>
 
@@ -303,6 +310,38 @@
   let openedByUser = false;
 
   const setMsg = (html) => { msg.innerHTML = html; };
+
+  /* ---------- Sprachen: Texte und Medien ---------- */
+  const LANG = {
+    de: {
+      hint: 'Karte antippen oder Button nutzen', greeting: 'Frohe Weihnachten',
+      open: 'Karte öffnen', close: 'Karte schließen',
+      ariaOpen: 'Weihnachtskarte öffnen', ariaClose: 'Weihnachtskarte schließen',
+      plain: 'inside.jpg', video: 'signature.mp4', signed: 'inside-signed.jpg',
+      altPlain: 'Innenseite der Karte', altSigned: 'Innenseite mit Unterschrift Ulrich Thoden'
+    },
+    en: {
+      hint: 'Tap the card or use the button', greeting: 'Merry Christmas',
+      open: 'Open card', close: 'Close card',
+      ariaOpen: 'Open Christmas card', ariaClose: 'Close Christmas card',
+      plain: 'inside-en.jpg', video: 'signature-en.mp4', signed: 'inside-signed-en.jpg',
+      altPlain: 'Inside of the card', altSigned: 'Inside of the card, signed by Ulrich Thoden'
+    }
+  };
+  let T = LANG.de;
+  function applyLanguage(lng) {
+    T = LANG[lng] || LANG.de;
+    document.documentElement.lang = lng;
+    btnCard.textContent = T.open;
+    if (lng !== 'de') {
+      const imgPlain = document.getElementById('imgPlain');
+      const imgSigned = document.getElementById('imgSigned');
+      imgPlain.src = T.plain;  imgPlain.alt = T.altPlain;
+      imgSigned.src = T.signed; imgSigned.alt = T.altSigned;
+      video.src = T.video;
+      try { video.load(); } catch (e) {}
+    }
+  }
 
   /* ---------- Audio ---------- */
   // Audio darf die Karte nie blockieren: jeder Fehler wird abgefangen
@@ -333,10 +372,12 @@
   });
 
   /* ---------- Umschlag öffnen ---------- */
-  function openEnvelope() {
+  function openEnvelope(lng) {
     if (phase !== 'envelope') return;
     phase = 'card-closed';
-    btnEnv.hidden = true;
+    applyLanguage(lng === 'en' ? 'en' : 'de');
+    document.getElementById('btnRow').hidden = true;
+    setMsg('&nbsp;');
     document.body.classList.add('opened');
 
     // Ab hier läuft die 9,5-s-Uhr; Ton startet sofort (Nutzergeste)
@@ -355,7 +396,7 @@
       card.classList.add('ready');
       card.setAttribute('tabindex', '0');
       btnCard.hidden = false;
-      setMsg('<span class="dot">●</span>&nbsp; Karte antippen oder Button nutzen');
+      setMsg('<span class="dot">●</span>&nbsp; ' + T.hint);
     }, 2000);
   }
 
@@ -387,9 +428,9 @@
     resetInside();
     card.classList.add('open');
     if (byUser) switchToLoop();            // sofortiger Wechsel auf öffnen.wav in Dauerschleife
-    card.setAttribute('aria-label', 'Weihnachtskarte schließen');
-    btnCard.textContent = 'Karte schließen';
-    setMsg('<span class="dot">●</span>&nbsp; Frohe Weihnachten');
+    card.setAttribute('aria-label', T.ariaClose);
+    btnCard.textContent = T.close;
+    setMsg('<span class="dot">●</span>&nbsp; ' + T.greeting);
     sigTimer = setTimeout(playSignature, OPEN_MS + START_DELAY);
   }
 
@@ -397,9 +438,9 @@
     if (phase !== 'card-open') return;
     phase = 'card-closed';
     card.classList.remove('open');
-    card.setAttribute('aria-label', 'Weihnachtskarte öffnen');
-    btnCard.textContent = 'Karte öffnen';
-    setMsg('<span class="dot">●</span>&nbsp; Karte antippen oder Button nutzen');
+    card.setAttribute('aria-label', T.ariaOpen);
+    btnCard.textContent = T.open;
+    setMsg('<span class="dot">●</span>&nbsp; ' + T.hint);
     sigTimer = setTimeout(resetInside, OPEN_MS);
     switchToClosedLoop();
     // Nach dem ersten Öffnen kein Auto-Öffnen mehr
@@ -407,8 +448,10 @@
 
   function toggleCard() { phase === 'card-open' ? closeCard() : openCard(true); }
 
-  btnEnv.addEventListener('click', openEnvelope);
-  document.querySelector('.stage').addEventListener('click', () => { if (phase === 'envelope') openEnvelope(); });
+  btnEnv.addEventListener('click', () => openEnvelope('de'));
+  document.getElementById('btnEnvelopeEn').addEventListener('click', () => openEnvelope('en'));
+  // Klick direkt auf den Umschlag: Deutsch als Standard
+  document.querySelector('.stage').addEventListener('click', () => { if (phase === 'envelope') openEnvelope('de'); });
   btnCard.addEventListener('click', toggleCard);
   card.addEventListener('click', () => { if (card.classList.contains('ready')) toggleCard(); });
   card.addEventListener('keydown', (e) => {
